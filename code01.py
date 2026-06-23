@@ -213,11 +213,28 @@ def build_workbook(
         current_row = start_row
         records_written = 0
 
+        # "CL" override state for this date block. For each day (date row)
+        # we scan rows in the jCol area; if we encounter a marker row in
+        # column A containing "其他時間代號" / "Other Hours Code", all
+        # *subsequent* records emitted by this function for that day will
+        # use TransType = "CL". This flag is local to the function, so it
+        # resets automatically when a new day is processed.
+        cl_mode = False
+
         row = date_row + 7
         while row <= src_ws.max_row:
             work_val = src_ws[f"{work_col}{row}"].value
             hours_val = src_ws[f"{hours_col}{row}"].value
             ot_val = src_ws[f"{ot_col}{row}"].value
+
+            # Detect the "Other Hours Code" marker in column A. Once this
+            # is seen for the current date block, all *subsequent* records
+            # get TransType = "CL" regardless of OT or shift code.
+            marker_val = src_ws[f"A{row}"].value
+            if isinstance(marker_val, str):
+                marker_str = marker_val.strip()
+                if "其他時間代號" in marker_str or "other hours code" in marker_str.lower():
+                    cl_mode = True
 
             # If an entire trio of cells is empty we allow for a limited number
             # of blank rows; after that we stop scanning this block.
@@ -243,24 +260,30 @@ def build_workbook(
                 # have thin borders, be centred, and use Aptos font.
                 if _has_positive_hours(hours_val):
                     worksheet.write(current_row, 7, float(hours_val), data_border_format)
-
                 # Column I: TransType.
                 # Priority order:
-                #   1) If there is OT (value in ot_col), TransType = "OT".
-                #   2) Otherwise, derive from shift code on the header row:
+                #   1) If there is OT (value in ot_col),
+                #      TransType = "OT".
+                #   2) Otherwise, derive from shift code on the header row.
+                #      If we are in CL mode (after encountering the
+                #      "Other Hours Code" marker), TransType = "CL";
+                #      otherwise:
                 #        N  -> NS
                 #        not N -> NT
                 # Column I cells have no borders.
                 trans_type = ""
 
-                # OT condition (highest precedence).
+                # 1) OT has highest priority, regardless of CL mode.
                 if ot_val not in (None, "") and _has_positive_hours(ot_val):
                     trans_type = "OT"
                 else:
-                    # Fallback to shift-based NS/NT logic.
+                    # 2) Derive from shift code and CL mode.
                     if shift_code not in (None, ""):
                         shift_str = str(shift_code).strip().upper()
-                        trans_type = "NS" if shift_str == "N" else "NT"
+                        if cl_mode:
+                            trans_type = "CL"
+                        else:
+                            trans_type = "NS" if shift_str == "N" else "NT"
 
                 if trans_type:
                     worksheet.write(current_row, 8, trans_type)
