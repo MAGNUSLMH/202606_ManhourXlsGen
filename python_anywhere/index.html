@@ -1,4 +1,4 @@
-<!xltype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -20,38 +20,147 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 400px;
+            max-width: 60vw;
             width: 100%;
         }
-        h2 { color: #333; margin-bottom: 20px; }
-        input[type="file"] {
-            margin: 20px 0;
-            display: block;
-            width: 100%;
+        h1 { color: #333; margin-bottom: 20px; }
+
+        input[type="file"]{
+            margin: 7px 0px 7px;
+            border: 2px dashed grey;
+            padding: 5px;
+            font-size: 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        input[type="checkbox"]{
+            transform: scale(1.5);
+        }
+        input[type="checkbox"], label{
+            margin: 7px 0px 7px;
+            display: inline;
+            font-size: 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             font-size: 16px;
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s;
             width: 100%;
+            font-weight: bold;
         }
         button:hover { background-color: #0056b3; }
+
+        /* Progress & Status Styles */
+        .status-container {
+            display: none;
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 12px;
+            margin-bottom: 10px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.4s ease;
+        }
+        .timer-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .checkbox-div{
+            margin: 7px 0px 7px
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Upload Timesheet</h2>
-    <form method="POST" enctype="multipart/form-data">
+    <h1>MT Timesheet for COT Tool</h1>
+    <h3 id="subtitle">Tick the checkbox if you wish to generate a sheet for the stated purpose</h3>
+    <hr>
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
         <input type="file" name="file" accept=".xlsx, .xlsm" required>
-        <button type="submit">Process & Download</button>
+        <div class="checkbox-div">
+            <input type="checkbox" id="manhour" name="manhour" value="manhour">
+            <label for="manhour" style="padding: 2px 6px;">Generate provisional manhour sheet</label>
+        </div>
+        <div class="checkbox-div">
+            <input type="checkbox" id="highlight" name="highlight" value="highlight">
+            <label for="highlight" style="padding: 2px 6px;"><span style="background-color:red; color:white;">Highlight</span> cells with OT Claim values</label>
+        </div>
+        <button type="submit" id="submitBtn">Process & Download</button>
     </form>
+
+    <div class="status-container" id="statusContainer">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="timer-text" id="statusMessage">Processing file...</div>
+        <div class="timer-text" id="timer">Time Elapsed: 0.0s</div>
+    </div>
 </div>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        // Hide button and reveal progress/timer layout
+        document.getElementById('subtitle').style.display = "none";
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').style.backgroundColor = '#ccc';
+        document.getElementById('statusContainer').style.display = 'block';
+
+        const progressBar = document.getElementById('progressBar');
+        const timerElement = document.getElementById('timer');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let startTime = Date.now();
+        let progress = 0;
+
+        // 1. Live Timer Interval (Updates every 100ms)
+        const timerInterval = setInterval(function() {
+            let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+            timerElement.innerText = `Time Elapsed: ${elapsedTime}s`;
+        }, 100);
+
+        // 2. Incremental Progress Animation
+        // Simulates progress up to 90% while the server computes.
+        // Once the browser receives the file download, the script ends.
+        const progressInterval = setInterval(function() {
+            if (progress < 90) {
+                progress += (90 - progress) * 0.15; // Smooth incremental easing
+                progressBar.style.width = progress + '%';
+            }
+        }, 300);
+
+        // Reset the interface gracefully after a short delay so the user can submit again later
+        window.addEventListener('blur', function() {
+            // Browsers trigger a window blur event when the Save As dialog window takes focus
+            setTimeout(() => {
+                clearInterval(timerInterval);
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                statusMessage.innerText = "Download complete!";
+                document.getElementById('subtitle').style.display = "block";
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').style.backgroundColor = '#007bff';
+            }, 2000);
+        });
+    });
+</script>
 
 </body>
 </html>

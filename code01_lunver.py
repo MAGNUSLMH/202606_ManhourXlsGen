@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Optional
-
 from datetime import date, datetime
 
 import xlsxwriter
@@ -53,16 +51,16 @@ def _has_positive_hours(value) -> bool:
 
 def build_workbook(
     filename: str = "sample.xlsx",
-    staffID: Optional[List[str]] = None,
-    dates: Optional[List[int]] = None,
+    staffID: list[str] | None = None,
+    dates: list[str] | None = None,
     *,
     timesheet_path: str,
     jCol1: str,
     jCol2: str,
-    nCol1: List[str],
-    nCol2: List[str],
-    oCol1: List[str],
-    oCol2: List[str],
+    nCol1: list[str],
+    nCol2: list[str],
+    oCol1: list[str],
+    oCol2: list[str],
 ) -> None:
     """Create an Excel workbook with one worksheet per staff / column set.
 
@@ -189,6 +187,7 @@ def build_workbook(
     # given date row N and normal-hours column (e.g. "C"), the shift code is
     # read from row N+3 in that same column (e.g. "C{N+3}").
 
+
     def _process_date_block(
         worksheet,
         staff_id: str,
@@ -212,6 +211,8 @@ def build_workbook(
 
         current_row = start_row
         records_written = 0
+        ot_val = src_ws[f"{ot_col}{date_row + 49}"].value
+        comp_leave_code = "CL" if ot_val == "C/L" else ot_val
 
         # "CL" override state for this date block. For each day (date row)
         # we scan rows in the jCol area; if we encounter a marker row in
@@ -231,9 +232,11 @@ def build_workbook(
             # is seen for the current date block, all *subsequent* records
             # get TransType = "CL" regardless of OT or shift code.
             marker_val = src_ws[f"A{row}"].value
+            
+
             if isinstance(marker_val, str):
                 marker_str = marker_val.strip()
-                if "其他時間代號" in marker_str or "other hours code" in marker_str.lower():
+                if "其他時間代號" in marker_str: # or "other hours code" in marker_str.lower():
                     cl_mode = True
 
             # If an entire trio of cells is empty we allow for a limited number
@@ -272,16 +275,18 @@ def build_workbook(
                 #        not N -> NT
                 # Column I cells have no borders.
                 trans_type = ""
-
                 # 1) OT has highest priority, regardless of CL mode.
                 if ot_val not in (None, "") and _has_positive_hours(ot_val):
-                    trans_type = "OT"
+                    if cl_mode:
+                        trans_type = comp_leave_code
+                    else:
+                        trans_type = "OT"
                 else:
                     # 2) Derive from shift code and CL mode.
                     if shift_code not in (None, ""):
                         shift_str = str(shift_code).strip().upper()
                         if cl_mode:
-                            trans_type = "CL"
+                            trans_type = "NT/CL"
                         else:
                             trans_type = "NS" if shift_str == "N" else "NT"
 
@@ -290,7 +295,6 @@ def build_workbook(
 
                 current_row += 1
                 records_written += 1
-
             row += 1
 
         return records_written
@@ -357,7 +361,7 @@ def main() -> None:
     """Entry point when running this script directly."""
 
     # Staff ID used for every record written to columns A, B, C.
-    staffID = ["309605", "429465", "488704"]  # TODO: replace with the actual staff id as needed.
+    staffID = ["488704", "429465", "676139"]  # TODO: replace with the actual staff id as needed.
 
     # Alphabetic column identifiers for the two column sets used when
     # extracting working orders and hours from the source timesheet.
@@ -380,11 +384,11 @@ def main() -> None:
     dates = list(range(4, 949, 59))  # This number list is fixed
 
     # Path to the source timesheet workbook.
-    timesheet_path = "Timesheet Record Team A_2026 May.xlsx"
+    timesheet_path = "Timesheet For_COT (JULY Team A)_20260723.xlsx"
 
     # Create the output workbook using the configured parameters.
     build_workbook(
-        "sample.xlsx",
+        datetime.now().strftime("%Y%m%d%H%M%S")+"_Manhour.xlsx",
         staffID=staffID,
         dates=dates,
         timesheet_path=timesheet_path,
