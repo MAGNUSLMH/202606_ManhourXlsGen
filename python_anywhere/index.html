@@ -85,6 +85,21 @@
         .checkbox-div{
             margin: 7px 0px 7px
         }
+        .select-div {
+            margin: 7px 0px 7px;
+        }
+
+        select, .select-div label {
+            font-size: 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        select {
+            padding: 5px;
+            border: 1px solid grey;
+            border-radius: 4px;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +109,24 @@
     <h3 id="subtitle">Tick the checkbox if you wish to generate a sheet for the stated purpose</h3>
     <hr>
     <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <div class="select-div">
+            <label for="month">Select Month:</label>
+            <select id="month" name="month" required>
+                <option value="" disabled selected>-- Select Month --</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+            </select>
+        </div>
         <input type="file" name="file" accept=".xlsx, .xlsm" required>
         <div class="checkbox-div">
             <input type="checkbox" id="manhour" name="manhour" value="manhour">

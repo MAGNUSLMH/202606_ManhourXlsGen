@@ -22,6 +22,7 @@ def upload_file():
         if "file" not in request.files:
             return "No file part in the request", 400
 
+        selected_month = request.form.get('month')
         file = request.files["file"]
 
         if file.filename == "":
@@ -51,7 +52,12 @@ def upload_file():
             jCol1, jCol2 = "A", "I"
             nCol1, nCol2 = ["C", "E", "G"], ["J", "L", "N"]
             oCol1, oCol2 = ["D", "F", "H"], ["K", "M", "O"]
-            dates = list(range(4, 949, 59))
+            if selected_month in [1, 3, 5, 7, 8, 10, 12]:
+                dates = list(range(4, 949, 59))
+            elif selected_month == 2:
+                dates = list(range(4, 949, 59)) # FEB = special case
+            else:
+                dates = list(range(4, 884, 59))
 
             files_to_cleanup = [master_input_path]
 
